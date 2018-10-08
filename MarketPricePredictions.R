@@ -5,7 +5,7 @@
 
 #Open data set from : https://data.gov.in/search/site?query=paddy+price&field_search=&item=100
 #see this chart first : https://otexts.org/fpp2/arima-r.html
-
+library(dplyr)
 
 install.packages("TTR")
 library(TTR)
@@ -43,6 +43,8 @@ plot.ts(ts)
 smadf<- TTR::SMA(ts ,n=4) #bigger the n value more the points will get combined and averaged
 plot(smadf)
 plot(df$Paddy_Price) #compare with above
+
+plot(TTR::SMA(ts ,n=20)) #more averaged curve
 
 
 #---------------- ES(Exponential smoothing) methods ---------------------
@@ -161,8 +163,7 @@ library(forecast)
 plot(forecast::forecast(hw_triple,h=20))
 #or
 plot(forecast:::forecast.HoltWinters(hw_triple,h=20)) #note 3 colons
-#or
-plot(stats:::predict.HoltWinters(hw_triple,n.ahead = 20))  #note 3 colons
+
 
 #The forecasts are shown as a blue line, with the 80% prediction intervals as a dark shaded area, and the 95% prediction intervals as a light shaded area
 
@@ -198,6 +199,10 @@ myfore
 # Nov 2018       160.3671 134.8848 185.8495 143.7051 177.0291
 # Dec 2018       158.6670 131.6428 185.6912 140.9968 176.3371
 # Jan 2019       158.2933 129.6978 186.8889 139.5957 176.9909
+
+#or
+plot(stats:::predict.HoltWinters(hw_triple,n.ahead = 20))  #note 3 colons
+
 
 
 plot(myfore$residuals)
@@ -252,9 +257,6 @@ p$labels$x="Month of Year"
 p$labels$y="Paddy Price in Rupees"
 p #to run the plot again.
 
-forecast::autoplot(myets$residuals)
-
-plot(forecast:::forecast(myets, h=20))
 myforeets=forecast:::forecast(myets, h=20)
 plot(myforeets$residuals) #seems fine
 Box.test(myforeets$residuals, lag=20, type="Ljung-Box")  #seems fine , just escaped
@@ -274,29 +276,166 @@ Box.test(myforeets$residuals, lag=20, type="Ljung-Box")  #seems fine , just esca
 
 #While exponential smoothing models are based on a description of the trend and seasonality in the data, ARIMA models aim to describe the autocorrelations in the data.
 
+install.packages("aTSA")
+library(aTSA)
+adf.test(ts)
+# Augmented Dickey-Fuller Test 
+# alternative: stationary 
+# 
+# Type 1: no drift no trend 
+# lag  ADF p.value
+# [1,]   0 3.90   0.990
+# [2,]   1 1.71   0.977
+# [3,]   2 1.96   0.986
+# [4,]   3 1.58   0.970
+# Type 2: with drift no trend 
+# lag   ADF p.value
+# [1,]   0 -1.52   0.513
+# [2,]   1 -1.24   0.610
+# [3,]   2 -1.35   0.571
+# [4,]   3 -1.31   0.585
+# Type 3: with drift and trend 
+# lag   ADF p.value
+# [1,]   0 -1.11   0.915
+# [2,]   1 -1.95   0.591
+# [3,]   2 -1.76   0.667
+# [4,]   3 -2.01   0.563
+# ---- 
+#   Note: in fact, p.value = 0.01 means p.value <= 0.01 
+
+#H0= not stationary (opposite in ADF)
+#Ha= stationary
+#result means not stationary
+
+adf.test(diff(ts,differences = 1))
+# Augmented Dickey-Fuller Test 
+# alternative: stationary 
+# 
+# Type 1: no drift no trend 
+# lag   ADF p.value
+# [1,]   0 -4.04    0.01
+# [2,]   1 -3.86    0.01
+# [3,]   2 -2.89    0.01
+# [4,]   3 -3.58    0.01
+# Type 2: with drift no trend 
+# lag   ADF p.value
+# [1,]   0 -4.53  0.0100
+# [2,]   1 -4.52  0.0100
+# [3,]   2 -3.43  0.0152
+# [4,]   3 -4.39  0.0100
+# Type 3: with drift and trend 
+# lag   ADF p.value
+# [1,]   0 -4.54  0.0100
+# [2,]   1 -4.56  0.0100
+# [3,]   2 -3.47  0.0514
+# [4,]   3 -4.49  0.0100
+# ---- 
+#   Note: in fact, p.value = 0.01 means p.value <= 0.01 
+
+#result means stationary now
+
+#unit root = also called a unit root process or a difference stationary process
+
+#kpss test
+#use KPSS Unit Root test to check if d>0 is needed - Kwiatkowski-Phillips-Schmidt-Shin (KPSS) test.
+#here Trend stationary means "stationary around the trend", i.e. the trend needn't be stationary, but the de-trended data is. Level stationary means that the data is like white noise.
+#The null hypothesis for the test is that the data is stationary.
+#The alternate hypothesis for the test is that the data is not stationary.
+
+#Note: ADF only tests for unit root stationary, this could be trend stationary. So you should use the KPSS test, see stats.stackexchange.com/questions/30569/… In general, there is a difference, between DS (difference-stationary) and TS (trend stationary) models. KPSS is the better test to distinguish between those models
+
+#https://stats.stackexchange.com/questions/30569/what-is-the-difference-between-a-stationary-test-and-a-unit-root-test
+# The Concepts and examples of Unit-root tests and stationarity tests
+# --------------------------------------------------------------------------------
+# Concept of Unit-root tests:
+#   
+#   Null hypothesis: Unit-root
+# 
+# Alternative hypothesis: Process has root outside the unit circle, which is usually equivalent to stationarity or trend stationarity
+# 
+# Concept of Stationarity tests
+# 
+# Null hypothesis: (Trend) Stationarity
+# 
+# Alternative hypothesis: There is a unit root.
+# 
+# There are many different Unit-root tests and many Stationarity tests.
+# 
+# Some Unit root tests:
+#   
+#   Dickey-Fuller test
+# Augmented Dickey Fuller test
+# Phillipps-Perron test
+# Zivot-Andrews test
+# ADF-GLS test
+# The most simple test is the DF-test. The ADF and the PP test are similar to the Dickey-Fuller test, but they correct for lags. The ADF does so by including them the PP test does so by adjusting the test statistics.
+# 
+# Some Stationarity tests:
+#   
+#   KPSS
+# 
+# Leybourne-McCabe
+# 
+# In practice KPSS test is used far more often. The main difference of both tests is that KPSS is a non-parametric test and Leybourne-McCabe is a parametric test.
+# 
+# How unit-root test and stationarity-test complement each other
+# If you have a time series data set how it usually appears in econometric time series I propose you should apply both a Unit root test: (Augmented) Dickey Fuller or Phillips-Perron depending on the structure of the underlying data and a KPSS test.
+# 
+# Case 1 Unit root test: you can’t reject H0; KPSS test: reject H0. Both imply that series has unit root.
+# 
+# Case 2 Unit root test: Reject H0. KPSS test: don't reject H0. Both imply that series is stationary.
+# 
+# Case 3 If we can’t reject both test: data give not enough observations.
+# 
+# Case 4 Reject unit root, reject stationarity: both hypotheses are component hypotheses – heteroskedasticity in a series may make a big difference; if there is structural break it will affect inference.
+# 
+# Power problem: if there is small random walk component (small variance σ2μ), we can’t reject unit root and can’t reject stationarity.
+# 
+# Economics: if the series is highly persistent we can’t reject H0 (unit root) – highly persistent may be even without unit root, but it also means we shouldn’t treat/take data in levels. Whether a time series is "highly persistent" can be measured with the p-value of a unit-root test. For a more detailed discussion what "persistence" means in time-series see: Persistence in time series
+# 
+# General rule about statistical testing You cannot proove a null hypothesis, you can only affirm it. However, if you reject a null hypothesis then you can be very sure that the null hypothesis is really not true. Thus alternative hypothesis is always a stronger hypothesis than the null hypothesis.
+# 
+
+install.packages("tseries")
+library(tseries)
+
+kpss.test(ts)#reject null hypothesis
+# KPSS Test for Level Stationarity
+# 
+# data:  ts
+# KPSS Level = 3.3243, Truncation lag parameter = 1, p-value = 0.01
+
+kpss.test(diff(ts,differences = 1)) #accept null hypothesis
+# KPSS Test for Level Stationarity
+# 
+# data:  diff(ts, differences = 1)
+# KPSS Level = 0.21802, Truncation lag parameter = 1, p-value = 0.1
+
+kpss.test(diff(ts,differences = 1,null=c("Level", "Trend")))
+
+# KPSS Test for Level Stationarity
+# 
+# data:  diff(ts, differences = 1, null = c("Level", "Trend"))
+# KPSS Level = 0.21802, Truncation lag parameter = 1, p-value = 0.1
+# 
+kpss.test(diff(ts,differences = 1,null="Trend"))
+# KPSS Test for Level Stationarity
+# 
+# data:  diff(ts, differences = 1, null = "Trend")
+# KPSS Level = 0.21802, Truncation lag parameter = 1, p-value = 0.1
+
+
+ts%>% forecast::ggtsdisplay()
+ts %>% diff(differences=1) %>% forecast::ggtsdisplay()
+ts %>% diff(differences=2) %>% forecast::ggtsdisplay()
 ts %>% diff(differences=3) %>% forecast::ggtsdisplay()
 
+diffts=diff(ts, differences=1) 
+diffts %>% forecast::ggtsdisplay()
 
-plot(diff(ts, differences=3)) #seems to be good.
-diffts=diff(ts, differences=3) #use KPSS Unit Root test to check if d>0 is needed - Kwiatkowski-Phillips-Schmidt-Shin (KPSS) test
-
-
-acf(diffts, lag.max = 20,na.action = na.pass) #note the x axis , fractions should be multiplied by 12. See we will get 12 x 1.5 = 18 , + 2 more = 20 lags  !
-
-
-acf(diffts, lag.max = 20,na.action = na.pass, plot=FALSE) #to get the values
-# 
-# Autocorrelations of series ‘diffts’, by lag
-# 
-# 0.0000 0.0833 0.1667 0.2500 0.3333 0.4167 0.5000 0.5833 0.6667 0.7500 0.8333 0.9167 1.0000 1.0833 1.1667 
-# 1.000 -0.407 -0.315  0.370 -0.164 -0.030  0.092 -0.046 -0.077  0.136 -0.075 -0.086  0.213 -0.051 -0.173 
-# 1.2500 1.3333 1.4167 1.5000 1.5833 1.6667 
-# 0.192 -0.018 -0.144  0.134  0.016 -0.211 
-
-
-#p = 3?
-#d= 3
-#q= 2 ?
+#d=1
+#q=2?
+#p=3?
 
 #https://otexts.org/fpp2/arima-r.html
 forecast:::auto.arima(ts,stepwise=FALSE , approximation=FALSE,seasonal=FALSE)  
@@ -315,9 +454,8 @@ forecast:::auto.arima(ts,stepwise=FALSE , approximation=FALSE,seasonal=FALSE)
 # AIC=231.1   AICc=231.44   BIC=237.97
 
 
-#If we use the “aic” criterion, which penalises the number of parameters , but it remains the same in our case.
+#with seasonal =True:
 
-fit=forecast:::auto.arima(ts,ic = "aic", seasonal = FALSE)
 # Series: ts 
 # ARIMA(0,1,1)(0,1,1)[12] 
 # 
@@ -330,6 +468,7 @@ fit=forecast:::auto.arima(ts,ic = "aic", seasonal = FALSE)
 # AIC=200.99   AICc=201.41   BIC=207.32
 
 #If we combine differencing with autoregression and a moving average model, we obtain a non-seasonal ARIMA model. 
+
 arima(ts, order=c(0,1,1))
 # Call:
 #   arima(x = ts, order = c(0, 1, 1))
@@ -340,9 +479,6 @@ arima(ts, order=c(0,1,1))
 # s.e.  0.0838
 # 
 # sigma^2 estimated as 1.415:  log likelihood = -116.75,  aic = 237.5
-
-library(dplyr)
-fit %>% forecast::forecast(h=10) %>% forecast::autoplot(include=80)
 
 
 #-------------------SEASONAL ARIMA ---------------------
@@ -361,7 +497,155 @@ fit=forecast:::auto.arima(ts,ic = "aic")
 # AIC=200.99   AICc=201.41   BIC=207.32
 # 
 
-ts %>%  forecast::Arima(order=c(3,3,2), seasonal=c(3,3,2)) %>%
-  residuals() %>% ggtsdisplay()
+fit %>% forecast::forecast(h=10) %>% forecast::autoplot(include=80)
+ts %>%  forecast::Arima(order=c(2,1,2), seasonal=c(2,1,2)) %>%   residuals() %>% forecast::ggtsdisplay()
+forecast::Arima(ts,order=c(2,1,2), seasonal=c(2,1,2))
+# Series: ts 
+# ARIMA(2,1,2)(2,1,2)[12] 
+# 
+# Coefficients:
+#   ar1     ar2     ma1      ma2    sar1     sar2     sma1    sma2
+# 0.4560  0.4053  0.0666  -0.6640  0.4198  -0.3011  -1.4517  0.5218
+# s.e.  0.2475  0.1941  0.2134   0.1668  0.9689   0.3366   3.2013  1.6358
+# 
+# sigma^2 estimated as 0.9392:  log likelihood=-94.53
+# AIC=207.07   AICc=210.6   BIC=226.06
 
-forecast::Arima(ts,order=c(0,1,1),seasonal=c(0,1,1))
+forecast::Arima(ts,order=c(2,1,2), seasonal=c(1,1,2))
+# Series: ts 
+# ARIMA(2,1,2)(1,1,2)[12] 
+# 
+# Coefficients:
+#   ar1     ar2     ma1      ma2     sar1     sma1     sma2
+# 0.4837  0.3603  0.0694  -0.6300  -0.4027  -0.4874  -0.5121
+# s.e.  0.2514  0.1894  0.2181   0.1491   0.6726   0.6991   0.6482
+# 
+# sigma^2 estimated as 1.069:  log likelihood=-95.22
+# AIC=206.44   AICc=209.21   BIC=223.33
+
+forecast::Arima(ts,order=c(2,1,2), seasonal=c(1,1,1))
+# Series: ts 
+# ARIMA(2,1,2)(1,1,1)[12] 
+# 
+# Coefficients:
+#   ar1     ar2     ma1      ma2    sar1     sma1
+# 0.4993  0.3521  0.0604  -0.6292  0.0779  -0.9997
+# s.e.  0.2425  0.1868  0.2086   0.1434  0.1644   0.3122
+# 
+# sigma^2 estimated as 1.06:  log likelihood=-95.42
+# AIC=204.84   AICc=206.95   BIC=219.61
+
+forecast::Arima(ts,order=c(1,1,1), seasonal=c(1,1,1))
+# Series: ts 
+# ARIMA(1,1,1)(1,1,1)[12] 
+# 
+# Coefficients:
+#   ar1     ma1    sar1     sma1
+# -0.1766  0.7446  0.1133  -0.9999
+# s.e.   0.2238  0.1720  0.1638   0.3278
+# 
+# sigma^2 estimated as 1.084:  log likelihood=-96.89
+# AIC=203.79   AICc=204.88   BIC=214.34
+
+forecast::Arima(ts,order=c(1,1,1), seasonal=c(1,1,0))
+# Series: ts 
+# ARIMA(1,1,1)(1,1,0)[12] 
+# 
+# Coefficients:
+#   ar1     ma1     sar1
+# -0.0324  0.6848  -0.3725
+# s.e.   0.2287  0.1888   0.1325
+# 
+# sigma^2 estimated as 1.657:  log likelihood=-101.57
+# AIC=211.15   AICc=211.86   BIC=219.59
+
+forecast::Arima(ts,order=c(1,1,1), seasonal=c(0,1,1))
+# Series: ts 
+# ARIMA(1,1,1)(0,1,1)[12] 
+# 
+# Coefficients:
+#   ar1     ma1     sma1
+# -0.1872  0.7534  -0.9994
+# s.e.   0.2088  0.1553   0.6962
+# 
+# sigma^2 estimated as 1.036:  log likelihood=-97.15
+# AIC=202.29   AICc=203   BIC=210.73
+
+forecast::Arima(ts,order=c(0,1,1), seasonal=c(0,1,1))
+# Series: ts 
+# ARIMA(0,1,1)(0,1,1)[12] 
+# 
+# Coefficients:
+#   ma1     sma1
+# 0.6212  -0.8816
+# s.e.  0.1234   0.5684
+# 
+# sigma^2 estimated as 1.148:  log likelihood=-97.49
+# AIC=200.99   AICc=201.41   BIC=207.32
+
+forecast::Arima(ts,order=c(0,1,1), seasonal=c(0,1,0))
+# Series: ts 
+# ARIMA(0,1,1)(0,1,0)[12] 
+# 
+# Coefficients:
+#   ma1
+# 0.6196
+# s.e.  0.1127
+# 
+# sigma^2 estimated as 1.847:  log likelihood=-104.98
+# AIC=213.96   AICc=214.17   BIC=218.18
+
+forecast::Arima(ts,order=c(0,1,0), seasonal=c(0,1,1))
+# Series: ts 
+# ARIMA(0,1,0)(0,1,1)[12] 
+# 
+# Coefficients:
+#   sma1
+# -0.9999
+# s.e.   0.3216
+# 
+# sigma^2 estimated as 1.342:  log likelihood=-105.81
+# AIC=215.62   AICc=215.83   BIC=219.84
+
+forecast::Arima(ts,order=c(0,1,1), seasonal=c(0,1,1))
+# Series: ts 
+# ARIMA(0,1,1)(0,1,1)[12] 
+# 
+# Coefficients:
+#   ma1     sma1
+# 0.6212  -0.8816
+# s.e.  0.1234   0.5684
+# 
+# sigma^2 estimated as 1.148:  log likelihood=-97.49
+# AIC=200.99   AICc=201.41   BIC=207.32
+
+ts %>%  forecast::Arima(order=c(0,1,1), seasonal=c(0,1,1)) %>%   residuals() %>% forecast::ggtsdisplay()
+
+fit=forecast::Arima(ts,order=c(0,1,1),seasonal=c(0,1,1))
+fit %>% forecast::forecast(h=10) %>% forecast::autoplot(include=80)
+forecast::forecast(fit)
+# Point Forecast    Lo 80    Hi 80    Lo 95    Hi 95
+# Jun 2017       149.2747 147.8573 150.6921 147.1070 151.4424
+# Jul 2017       151.4623 148.7646 154.1601 147.3365 155.5882
+# Aug 2017       152.8382 149.2961 156.3804 147.4210 158.2555
+# Sep 2017       153.3309 149.1101 157.5518 146.8757 159.7862
+# Oct 2017       153.4593 148.6546 158.2640 146.1112 160.8074
+# Nov 2017       152.9663 147.6415 158.2912 144.8227 161.1100
+# Dec 2017       151.7949 145.9964 157.5934 142.9268 160.6630
+# Jan 2018       151.8556 145.6192 158.0919 142.3179 161.3932
+# Feb 2018       152.7381 146.0928 159.3835 142.5749 162.9013
+# Mar 2018       153.0017 145.9711 160.0324 142.2493 163.7542
+# Apr 2018       154.2333 146.8370 161.6295 142.9216 165.5449
+# May 2018       155.6537 147.9148 163.3925 143.8181 167.4893
+# Jun 2018       157.2734 149.1342 165.4127 144.8255 169.7213
+# Jul 2018       159.4611 150.8946 168.0275 146.3598 172.5623
+# Aug 2018       160.8370 151.8636 169.8103 147.1134 174.5605
+# Sep 2018       161.3297 151.9671 170.6922 147.0109 175.6485
+# Oct 2018       161.4580 151.7218 171.1943 146.5678 176.3483
+# Nov 2018       160.9651 150.8690 171.0612 145.5244 176.4057
+# Dec 2018       159.7936 149.3501 170.2372 143.8216 175.7657
+# Jan 2019       159.8543 149.0745 170.6341 143.3680 176.3406
+# Feb 2019       160.7369 149.6310 171.8428 143.7519 177.7219
+# Mar 2019       161.0005 149.5778 172.4232 143.5310 178.4700
+# Apr 2019       162.2320 150.5034 173.9606 144.2947 180.1693
+# May 2019       163.6524 151.6339 175.6709 145.2717 182.0331
